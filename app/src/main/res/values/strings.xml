@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Comic Reader</string>
+    <string name="title_library">Biblioteca</string>
+    <string name="title_reader">Lector</string>
+    <string name="title_settings">Ajustes</string>
+    
+    <!-- Acciones -->
+    <string name="action_open_file">Abrir archivo</string>
+    <string name="action_add_comic">Añadir cómic</string>
+    <string name="action_settings">Configuración</string>
+    <string name="action_clear_cache">Limpiar caché</string>
+    <string name="action_back">Volver</string>
+    
+    <!-- Modos de lectura -->
+    <string name="reading_mode_page">Página completa</string>
+    <string name="reading_mode_panel">Panel a panel</string>
+    <string name="reading_mode_continuous">Continuo</string>
+    <string name="reading_mode_webtoon">Webtoon</string>
+    
+    <!-- Direcciones de lectura -->
+    <string name="reading_direction_ltr">Izquierda a derecha</string>
+    <string name="reading_direction_rtl">Derecha a izquierda (Manga)</string>
+    
+    <!-- Mensajes -->
+    <string name="msg_empty_library">Tu biblioteca está vacía</string>
+    <string name="msg_open_file_hint">Abre un archivo para comenzar a leer</string>
+    <string name="msg_supported_formats">Formatos soportados: CBR, CBZ, PDF, EPUB, ZIP, RAR, JPG</string>
+    <string name="msg_loading">Cargando…</string>
+    <string name="msg_error">Error</string>
+    <string name="msg_cache_cleared">Caché limpiada</string>
+    
+    <!-- Formatos -->
+    <string name="format_cbr">CBR</string>
+    <string name="format_cbz">CBZ</string>
+    <string name="format_pdf">PDF</string>
+    <string name="format_epub">EPUB</string>
+    <string name="format_zip">ZIP</string>
+    <string name="format_rar">RAR</string>
+    <string name="format_image">Imagen</string>
+</resources>
