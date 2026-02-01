@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -47,7 +47,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.0")
     
     // Jetpack Compose
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
@@ -68,19 +67,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     
-    // Archivo comprimidos - ZIP y RAR
+    // Archivos comprimidos - ZIP y RAR
     implementation("net.lingala.zip4j:zip4j:2.11.5")
     implementation("com.github.junrar:junrar:7.5.5")
     
     // PDF
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
-    
-    // EPUB
-    implementation("nl.siegmann.epublib:epublib-core:3.1") {
-        exclude(group = "org.slf4j")
-        exclude(group = "xmlpull")
-    }
-    implementation("org.slf4j:slf4j-android:1.7.36")
     
     // DataStore para preferencias
     implementation("androidx.datastore:datastore-preferences:1.1.1")
