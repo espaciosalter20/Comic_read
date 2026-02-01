@@ -26,7 +26,7 @@ jobs:
       uses: android-actions/setup-android@v3
     
     - name: Generate Gradle Wrapper
-      run: gradle wrapper --gradle-version 8.2
+      run: gradle wrapper --gradle-version 8.9
     
     - name: Build Debug APK
       run: ./gradlew assembleDebug --stacktrace
