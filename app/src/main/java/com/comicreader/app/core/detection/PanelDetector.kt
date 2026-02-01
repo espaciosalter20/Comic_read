@@ -309,7 +309,7 @@ class PanelDetector(
         
         for (panel in sortedByTop) {
             val existingRow = rows.find { row ->
-                row.any { abs(it.bounds.centerY - panel.bounds.centerY) < rowThreshold }
+                row.any { abs(it.bounds.centerY() - panel.bounds.centerY()) < rowThreshold }
             }
             
             if (existingRow != null) {
@@ -627,7 +627,7 @@ class AdvancedPanelDetector(
         
         for (panel in sortedByTop) {
             val existingRow = rows.find { row ->
-                row.any { abs(it.bounds.centerY - panel.bounds.centerY) < rowThreshold }
+                row.any { abs(it.bounds.centerY() - panel.bounds.centerY()) < rowThreshold }
             }
             
             if (existingRow != null) {

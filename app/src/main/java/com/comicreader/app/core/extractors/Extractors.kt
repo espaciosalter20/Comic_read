@@ -9,20 +9,14 @@ import com.comicreader.app.data.models.ComicFormat
 import com.comicreader.app.data.models.ComicPage
 import com.comicreader.app.data.models.ExtractionResult
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
-import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.rendering.PDFRenderer as PdfBoxRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
-import nl.siegmann.epublib.epub.EpubReader
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.InputStream
 import com.github.junrar.Archive
-import com.github.junrar.rarfile.FileHeader
 
 /**
  * Interfaz base para extractores de archivos
@@ -42,7 +36,6 @@ class ExtractorFactory(private val context: Context) {
             ZipExtractor(),
             RarExtractor(),
             PdfExtractor(context),
-            EpubExtractor(context),
             ImageExtractor()
         )
     }
@@ -68,13 +61,12 @@ class ZipExtractor : ComicExtractor {
     }
     
     override suspend fun extract(file: File, cacheDir: File): Flow<ExtractionResult> = flow {
-        withContext(Dispatchers.IO) {
-            try {
+        try {
+            withContext(Dispatchers.IO) {
                 val zipFile = ZipFile(file)
                 val extractDir = File(cacheDir, file.nameWithoutExtension)
                 extractDir.mkdirs()
                 
-                // Obtener lista de archivos de imagen
                 val imageFiles = zipFile.fileHeaders
                     .filter { !it.isDirectory }
                     .filter { isImageFile(it.fileName) }
@@ -84,8 +76,6 @@ class ZipExtractor : ComicExtractor {
                 val pages = mutableListOf<ComicPage>()
                 
                 imageFiles.forEachIndexed { index, header ->
-                    emit(ExtractionResult.Progress(index + 1, total))
-                    
                     val outputFile = File(extractDir, header.fileName.substringAfterLast("/"))
                     zipFile.extractFile(header, extractDir.absolutePath, outputFile.name)
                     
@@ -95,7 +85,7 @@ class ZipExtractor : ComicExtractor {
                             ComicPage(
                                 pageNumber = index,
                                 imagePath = outputFile.absolutePath,
-                                bitmap = null, // No guardar bitmap en memoria
+                                bitmap = null,
                                 width = bitmap.width,
                                 height = bitmap.height
                             )
@@ -104,11 +94,12 @@ class ZipExtractor : ComicExtractor {
                     }
                 }
                 
+                pages
+            }.let { pages ->
                 emit(ExtractionResult.Success(pages))
-                
-            } catch (e: Exception) {
-                emit(ExtractionResult.Error("Error extrayendo ZIP: ${e.message}", e))
             }
+        } catch (e: Exception) {
+            emit(ExtractionResult.Error("Error extrayendo ZIP: ${e.message}", e))
         }
     }
 }
@@ -123,24 +114,20 @@ class RarExtractor : ComicExtractor {
     }
     
     override suspend fun extract(file: File, cacheDir: File): Flow<ExtractionResult> = flow {
-        withContext(Dispatchers.IO) {
-            try {
+        try {
+            withContext(Dispatchers.IO) {
                 val archive = Archive(file)
                 val extractDir = File(cacheDir, file.nameWithoutExtension)
                 extractDir.mkdirs()
                 
-                // Filtrar y ordenar archivos de imagen
                 val imageHeaders = archive.fileHeaders
                     .filter { !it.isDirectory }
                     .filter { isImageFile(it.fileName) }
                     .sortedBy { it.fileName }
                 
-                val total = imageHeaders.size
                 val pages = mutableListOf<ComicPage>()
                 
                 imageHeaders.forEachIndexed { index, header ->
-                    emit(ExtractionResult.Progress(index + 1, total))
-                    
                     val outputFile = File(extractDir, header.fileName.substringAfterLast("/"))
                     outputFile.parentFile?.mkdirs()
                     
@@ -163,11 +150,12 @@ class RarExtractor : ComicExtractor {
                 }
                 
                 archive.close()
+                pages
+            }.let { pages ->
                 emit(ExtractionResult.Success(pages))
-                
-            } catch (e: Exception) {
-                emit(ExtractionResult.Error("Error extrayendo RAR: ${e.message}", e))
             }
+        } catch (e: Exception) {
+            emit(ExtractionResult.Error("Error extrayendo RAR: ${e.message}", e))
         }
     }
 }
@@ -178,7 +166,6 @@ class RarExtractor : ComicExtractor {
 class PdfExtractor(private val context: Context) : ComicExtractor {
     
     init {
-        // Inicializar PDFBox
         PDFBoxResourceLoader.init(context)
     }
     
@@ -187,12 +174,11 @@ class PdfExtractor(private val context: Context) : ComicExtractor {
     }
     
     override suspend fun extract(file: File, cacheDir: File): Flow<ExtractionResult> = flow {
-        withContext(Dispatchers.IO) {
-            try {
+        try {
+            withContext(Dispatchers.IO) {
                 val extractDir = File(cacheDir, file.nameWithoutExtension)
                 extractDir.mkdirs()
                 
-                // Usar PdfRenderer para Android (más eficiente)
                 val parcelFileDescriptor = ParcelFileDescriptor.open(
                     file, 
                     ParcelFileDescriptor.MODE_READ_ONLY
@@ -203,11 +189,8 @@ class PdfExtractor(private val context: Context) : ComicExtractor {
                 val pages = mutableListOf<ComicPage>()
                 
                 for (index in 0 until total) {
-                    emit(ExtractionResult.Progress(index + 1, total))
-                    
                     val page = pdfRenderer.openPage(index)
                     
-                    // Renderizar a alta resolución para cómics
                     val scale = 2.0f
                     val width = (page.width * scale).toInt()
                     val height = (page.height * scale).toInt()
@@ -220,7 +203,6 @@ class PdfExtractor(private val context: Context) : ComicExtractor {
                         PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
                     )
                     
-                    // Guardar como imagen
                     val outputFile = File(extractDir, "page_${index.toString().padStart(4, '0')}.png")
                     FileOutputStream(outputFile).use { fos ->
                         bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
@@ -242,76 +224,12 @@ class PdfExtractor(private val context: Context) : ComicExtractor {
                 pdfRenderer.close()
                 parcelFileDescriptor.close()
                 
+                pages
+            }.let { pages ->
                 emit(ExtractionResult.Success(pages))
-                
-            } catch (e: Exception) {
-                emit(ExtractionResult.Error("Error extrayendo PDF: ${e.message}", e))
             }
-        }
-    }
-}
-
-/**
- * Extractor para archivos EPUB
- */
-class EpubExtractor(private val context: Context) : ComicExtractor {
-    
-    override fun supports(format: ComicFormat): Boolean {
-        return format == ComicFormat.EPUB
-    }
-    
-    override suspend fun extract(file: File, cacheDir: File): Flow<ExtractionResult> = flow {
-        withContext(Dispatchers.IO) {
-            try {
-                val extractDir = File(cacheDir, file.nameWithoutExtension)
-                extractDir.mkdirs()
-                
-                val epubReader = EpubReader()
-                val book = FileInputStream(file).use { fis ->
-                    epubReader.readEpub(fis)
-                }
-                
-                val pages = mutableListOf<ComicPage>()
-                var pageIndex = 0
-                
-                // Extraer imágenes del EPUB
-                val resources = book.resources.all
-                val imageResources = resources.filter { resource ->
-                    resource.mediaType?.name?.startsWith("image/") == true
-                }.sortedBy { it.href }
-                
-                val total = imageResources.size
-                
-                imageResources.forEach { resource ->
-                    emit(ExtractionResult.Progress(pageIndex + 1, total))
-                    
-                    val extension = resource.href.substringAfterLast(".", "png")
-                    val outputFile = File(extractDir, "page_${pageIndex.toString().padStart(4, '0')}.$extension")
-                    
-                    FileOutputStream(outputFile).use { fos ->
-                        fos.write(resource.data)
-                    }
-                    
-                    val bitmap = BitmapFactory.decodeFile(outputFile.absolutePath)
-                    if (bitmap != null) {
-                        pages.add(
-                            ComicPage(
-                                pageNumber = pageIndex,
-                                imagePath = outputFile.absolutePath,
-                                width = bitmap.width,
-                                height = bitmap.height
-                            )
-                        )
-                        bitmap.recycle()
-                        pageIndex++
-                    }
-                }
-                
-                emit(ExtractionResult.Success(pages))
-                
-            } catch (e: Exception) {
-                emit(ExtractionResult.Error("Error extrayendo EPUB: ${e.message}", e))
-            }
+        } catch (e: Exception) {
+            emit(ExtractionResult.Error("Error extrayendo PDF: ${e.message}", e))
         }
     }
 }
@@ -322,26 +240,21 @@ class EpubExtractor(private val context: Context) : ComicExtractor {
 class ImageExtractor : ComicExtractor {
     
     override fun supports(format: ComicFormat): Boolean {
-        return format == ComicFormat.IMAGE
+        return format == ComicFormat.IMAGE || format == ComicFormat.EPUB
     }
     
     override suspend fun extract(file: File, cacheDir: File): Flow<ExtractionResult> = flow {
-        withContext(Dispatchers.IO) {
-            try {
+        try {
+            withContext(Dispatchers.IO) {
                 val pages = mutableListOf<ComicPage>()
                 
                 if (file.isDirectory) {
-                    // Carpeta con imágenes
                     val imageFiles = file.listFiles()
                         ?.filter { isImageFile(it.name) }
                         ?.sortedBy { it.name }
                         ?: emptyList()
                     
-                    val total = imageFiles.size
-                    
                     imageFiles.forEachIndexed { index, imageFile ->
-                        emit(ExtractionResult.Progress(index + 1, total))
-                        
                         val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
                         if (bitmap != null) {
                             pages.add(
@@ -356,9 +269,6 @@ class ImageExtractor : ComicExtractor {
                         }
                     }
                 } else {
-                    // Imagen individual
-                    emit(ExtractionResult.Progress(1, 1))
-                    
                     val bitmap = BitmapFactory.decodeFile(file.absolutePath)
                     if (bitmap != null) {
                         pages.add(
@@ -373,18 +283,16 @@ class ImageExtractor : ComicExtractor {
                     }
                 }
                 
+                pages
+            }.let { pages ->
                 emit(ExtractionResult.Success(pages))
-                
-            } catch (e: Exception) {
-                emit(ExtractionResult.Error("Error cargando imágenes: ${e.message}", e))
             }
+        } catch (e: Exception) {
+            emit(ExtractionResult.Error("Error cargando imágenes: ${e.message}", e))
         }
     }
 }
 
-/**
- * Utilidades compartidas
- */
 private val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp")
 
 fun isImageFile(fileName: String): Boolean {
@@ -392,12 +300,9 @@ fun isImageFile(fileName: String): Boolean {
     return extension in imageExtensions
 }
 
-/**
- * Caché de páginas extraídas
- */
 class PageCache(
     private val context: Context,
-    private val maxCacheSize: Long = 100 * 1024 * 1024 // 100MB
+    private val maxCacheSize: Long = 100 * 1024 * 1024
 ) {
     private val cacheDir = File(context.cacheDir, "comic_pages")
     
@@ -426,25 +331,5 @@ class PageCache(
             }
         }
         return size
-    }
-    
-    suspend fun trimCache() = withContext(Dispatchers.IO) {
-        val currentSize = getCacheSize()
-        if (currentSize > maxCacheSize) {
-            // Eliminar archivos más antiguos
-            val files = cacheDir.walkTopDown()
-                .filter { it.isFile }
-                .sortedBy { it.lastModified() }
-                .toList()
-            
-            var freedSpace = 0L
-            val targetFree = currentSize - (maxCacheSize * 0.8).toLong()
-            
-            for (file in files) {
-                if (freedSpace >= targetFree) break
-                freedSpace += file.length()
-                file.delete()
-            }
-        }
     }
 }
