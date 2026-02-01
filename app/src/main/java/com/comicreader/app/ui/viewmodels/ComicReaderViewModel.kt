@@ -286,6 +286,31 @@ class ComicReaderViewModel(application: Application) : AndroidViewModel(applicat
     }
 }
 
+private fun trimCache() {
+    try {
+        val dir = getApplication<Application>().cacheDir
+        deleteDir(dir)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+private fun deleteDir(dir: File?): Boolean {
+    if (dir != null && dir.isDirectory) {
+        val children = dir.list()
+        for (i in children.indices) {
+            val success = deleteDir(File(dir, children[i]))
+            if (!success) {
+                return false
+            }
+        }
+        return dir.delete()
+    } else if (dir != null && dir.isFile) {
+        return dir.delete()
+    }
+    return false
+}
+    
 /**
  * Estado de la biblioteca
  */
