@@ -2,15 +2,11 @@ package com.comicreader.app.data.models
 
 import android.graphics.Bitmap
 import android.graphics.RectF
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
  * Representa un cómic en la biblioteca
  */
-@Entity(tableName = "comics")
 data class Comic(
-    @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val title: String,
     val filePath: String,
