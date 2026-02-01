@@ -281,7 +281,7 @@ class ComicReaderViewModel(application: Application) : AndroidViewModel(applicat
     override fun onCleared() {
         super.onCleared()
         viewModelScope.launch {
-            pageCache.trimCache()
+            pageCache.clearCache()
         }
     }
 }
